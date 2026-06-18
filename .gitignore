@@ -1,0 +1,31 @@
+# Models / weights
+*.safetensors
+*.bin
+*.pt
+*.pth
+models/
+*_merged/
+
+# Datasets (non-commercial license: nuScenes / Stanford Cars / GTSRB / TextVQA / SUN397 — not redistributed here)
+data/
+nuscenes/
+*.tar
+*.tgz
+*.zip
+
+# Large generated training files (only small samples are versioned under data_samples/)
+exterior_full_sharegpt.json
+exterior_cot_sharegpt.json
+*_raw.jsonl
+!data_samples/*.jsonl
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+envs/
+
+# Logs / scratch
+logs/
+*.log
+.DS_Store
