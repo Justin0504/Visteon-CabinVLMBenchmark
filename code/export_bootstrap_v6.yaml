@@ -1,0 +1,7 @@
+model_name_or_path: /data/haiyuez/visteon_cabin_vlm/models/Qwen2.5-VL-7B-Instruct
+adapter_name_or_path: /data/haiyuez/visteon_cabin_vlm/models/bootstrap_v6_lora
+template: qwen2_vl
+trust_remote_code: true
+export_dir: /data/haiyuez/visteon_cabin_vlm/models/bootstrap_v6_merged
+export_size: 5
+export_legacy_format: false

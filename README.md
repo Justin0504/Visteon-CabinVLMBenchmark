@@ -19,15 +19,18 @@
 
 ## Frozen-test results (objective accuracy)
 
-| Category | base | v1 | v3 (all-rounder) | v4 | Qwen3-VL-4B |
-|---|---|---|---|---|---|
-| Vehicle make/model | 5% | **80%** | 60% | 67.5% | 10% |
-| Traffic sign | 92.5% | 100% | 100% | 100% | 75% |
-| Natural landscape | 60% | 77.5% | **82.5%** | 80% | 90% |
-| Text OCR | 82.5% | 77.5% | 82.5% | 77.5% | 82.5% |
-| Exterior scene (judge 1–10) | 7.58 | 8.0 | 7.92 | 7.95 | 7.75 |
+| Category | base | v3 | **v6 (best)** | Qwen3-VL-4B |
+|---|---|---|---|---|
+| Vehicle make/model | 5% | 60% | **72.5%** | 10% |
+| Traffic sign | 92.5% | 100% | 95% | 75% |
+| Natural landscape | 60% | 82.5% | 82.5% | 90% |
+| Text OCR | 82.5% | 82.5% | 80% | 82.5% |
+| Exterior scene (CoT-matched judge) | 7.58 | 7.28 | 7.12 | — |
 
-**v3 is the current best all-rounder.** Observed multi-task LoRA interference (make/model vs OCR compete for capacity).
+**v6 is the current best:** enhanced CoT captions (detection-box coords + VRU separation + vehicle
+coarse-class) + traffic lights lift vehicle recognition (60→72.5) while holding the rest; the exterior-scene
+number ties v3 once the judge prompt matches v6's CoT format (see [docs/11_Results_v6_PhaseB.md](docs/11_Results_v6_PhaseB.md)).
+Observed multi-task LoRA interference (make/model vs OCR compete for capacity).
 
 ---
 
