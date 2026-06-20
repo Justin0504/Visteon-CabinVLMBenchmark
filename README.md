@@ -19,18 +19,19 @@
 
 ## Frozen-test results (objective accuracy)
 
-| Category | base | v3 | **v6 (best)** | Qwen3-VL-4B |
+| Category | base | v6 | **v7 (FINAL)** | v8 |
 |---|---|---|---|---|
-| Vehicle make/model | 5% | 60% | **72.5%** | 10% |
-| Traffic sign | 92.5% | 100% | 95% | 75% |
-| Natural landscape | 60% | 82.5% | 82.5% | 90% |
-| Text OCR | 82.5% | 82.5% | 80% | 82.5% |
-| Exterior scene (CoT-matched judge) | 7.58 | 7.28 | 7.12 | — |
+| Vehicle make/model | 5% | 72.5% | **80.0%** | 72.5% |
+| Traffic sign (EU) | 92.5% | 95% | **97.5%** | 75.0% |
+| Natural landscape | 60% | 82.5% | 82.5% | 87.5% |
+| Text OCR | 82.5% | 80% | 75.0% | 72.5% |
+| Exterior scene (judge) | ~7.3 | 6.3 | 6.4 | 6.45 |
 
-**v6 is the current best:** enhanced CoT captions (detection-box coords + VRU separation + vehicle
-coarse-class) + traffic lights lift vehicle recognition (60→72.5) while holding the rest; the exterior-scene
-number ties v3 once the judge prompt matches v6's CoT format (see [docs/11_Results_v6_PhaseB.md](docs/11_Results_v6_PhaseB.md)).
-Observed multi-task LoRA interference (make/model vs OCR compete for capacity).
+**v7 is the delivery model** — domain-pure + deduped training; best on the hardest recognition tasks
+(vehicle 80, sign 97.5). v8 added Chinese signs (TT100K) + more OCR but **regressed** (sign 97.5→75)
+due to multi-task interference + train/test domain mismatch (test signs are European). See
+[docs/15_Final_Model_v7.md](docs/15_Final_Model_v7.md). Lesson: more data ≠ better; coverage additions
+need matching test slices to show benefit.
 
 ---
 

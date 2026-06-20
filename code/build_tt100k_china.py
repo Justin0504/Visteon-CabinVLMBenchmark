@@ -1,9 +1,10 @@
 """#4 China traffic signs + China-domain via TT100K (Tsinghua-Tencent 100K).
 Streams the HF parquet (no full 73GB download), takes a stratified subset of sign images,
 and builds label-grounded captions (GT category code + bbox) -> zero-hallucination."""
-import json, os, argparse
+import json, os, io, argparse
 from collections import Counter
 from datasets import load_dataset
+from PIL import Image
 R = "/data/haiyuez/visteon_cabin_vlm"
 IMGDIR = R + "/data/tt100k_imgs"
 os.makedirs(IMGDIR, exist_ok=True)
@@ -28,30 +29,25 @@ ds = load_dataset("PrashantDixit0/TT-100K", split="train", streaming=True)
 sg = []; fr = open(R + "/data/tt100k_china_sharegpt.json".replace("_sharegpt.json", "_raw.jsonl"), "w")
 cnt = Counter(); n = 0
 for r in ds:
-    objs = r.get("objects") or {}
-    cats = objs.get("category") or objs.get("categories") or []
-    boxes = objs.get("bbox") or objs.get("boxes") or []
-    if not cats:
+    objs = r.get("objects") or []   # list of {category, bbox:[x,y,w,h]}
+    if not objs:
         continue
-    # 取类别名(可能是 int id 或 str);若是 id 用 names 映射
-    names = []
-    feat = None
-    try:
-        feat = ds.features["objects"].feature["category"].names
-    except Exception:
-        feat = None
-    for c in cats:
-        names.append(feat[c] if (feat and isinstance(c, int)) else str(c))
     items = []
-    for nm, b in zip(names, boxes[:8]):
-        bb = [int(v) for v in b] if isinstance(b, (list, tuple)) else b
-        items.append((nm, meaning(nm), bb))
+    for o in objs[:8]:
+        nm = o.get("category")
+        b = o.get("bbox")
+        if not nm or not b:
+            continue
+        x, y, w, h = (int(v) for v in b)
+        items.append((str(nm), meaning(str(nm)), [x, y, x + w, y + h]))
     if not items:
         continue
     p = f"{IMGDIR}/tt_{n:04d}.jpg"
     try:
-        r["image"].convert("RGB").save(p, quality=88)
-    except Exception:
+        img = r["image"]
+        im = Image.open(io.BytesIO(img["bytes"])) if isinstance(img, dict) else img
+        im.convert("RGB").save(p, quality=88)
+    except Exception as e:
         continue
     desc = "; ".join(f'{nm} ({mn}) at bbox{bb}' for nm, mn, bb in items)
     first = items[0]
