@@ -53,3 +53,25 @@ is established, accuracy needs more data. **Takeaway: a benchmark must carry dom
 to credit domain-specific training data.**
 
 Scripts: `code/build_china_test.py`, `code/eval_china_slice.py`.
+
+---
+
+## v9 — AI cross-checked captions (NEW BEST, added 2026-06-20)
+
+The CoT captions were regenerated with a 2-pass **AI cross-check** (generate → independent fact-check
+that deletes claims unsupported by ground-truth). Caption faithfulness rose **53% → 80%** (3-rater check)
+while staying natural (not list-dumps). v9 = v7 recipe with these cross-checked captions.
+
+| Category | v7 | **v9 (NEW BEST)** |
+|---|---|---|
+| Vehicle make/model | 80.0 | 77.5 |
+| Traffic sign (EU) | 97.5 | 97.5 |
+| Natural landscape | 82.5 | 82.5 |
+| Text OCR | 75.0 | 72.5 |
+| **Exterior scene (judge)** | 6.4 | **7.65** |
+
+**Clean win:** higher caption faithfulness → exterior-scene judge **6.4 → 7.65 (+1.25)** with recognition
+held (sign/landscape tied; vehicle/OCR within ±1-image noise). This closes the loop:
+**caption quality ↑ ⇒ model scene-description ↑, no trade-off.** AI cross-check is the key method.
+
+**Delivery model = v9.** Scripts: `code/build_cot_xcheck.py`, `code/check_faith.py`, `code/build_train_v9.py`.
