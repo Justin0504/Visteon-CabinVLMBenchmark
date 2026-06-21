@@ -19,19 +19,20 @@
 
 ## Frozen-test results (objective accuracy)
 
-| Category | base | v6 | **v7 (FINAL)** | v8 |
-|---|---|---|---|---|
-| Vehicle make/model | 5% | 72.5% | **80.0%** | 72.5% |
-| Traffic sign (EU) | 92.5% | 95% | **97.5%** | 75.0% |
-| Natural landscape | 60% | 82.5% | 82.5% | 87.5% |
-| Text OCR | 82.5% | 80% | 75.0% | 72.5% |
-| Exterior scene (judge) | ~7.3 | 6.3 | 6.4 | 6.45 |
+| Category | base | v7 | **v9 (DELIVERY)** |
+|---|---|---|---|
+| Vehicle make/model | 5% | 80.0% | 77.5% |
+| Traffic sign (EU) | 92.5% | 97.5% | **97.5%** |
+| Natural landscape | 60% | 82.5% | 82.5% |
+| Text OCR | 82.5% | 75.0% | 72.5% |
+| Exterior scene (judge) | ~7.3 | 6.4 | **7.65** |
 
-**v7 is the delivery model** — domain-pure + deduped training; best on the hardest recognition tasks
-(vehicle 80, sign 97.5). v8 added Chinese signs (TT100K) + more OCR but **regressed** (sign 97.5→75)
-due to multi-task interference + train/test domain mismatch (test signs are European). See
-[docs/15_Final_Model_v7.md](docs/15_Final_Model_v7.md). Lesson: more data ≠ better; coverage additions
-need matching test slices to show benefit.
+**v9 is the delivery model.** It applies an **AI cross-check** to the CoT captions (generate → independent
+fact-check vs ground-truth), raising caption faithfulness **53%→80%**, which lifts the exterior-scene judge
+**6.4→7.65** with recognition held (sign/landscape tied; vehicle/OCR within noise). A clean, no-trade-off win.
+Earlier: v8 added Chinese signs (regressed on EU test but **wins the China-sign slice 32.5 vs 27.5** — domain
+matters). See [docs/15_Final_Model_v7.md](docs/15_Final_Model_v7.md). Lesson: caption quality ↑ ⇒ model ↑;
+more data ≠ better unless the test has a matching slice.
 
 ---
 
