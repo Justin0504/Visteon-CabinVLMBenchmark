@@ -13,11 +13,17 @@ a = ap.parse_args()
 os.makedirs(os.path.dirname(a.out), exist_ok=True)
 NL = "\n"
 
+import time
 def chat(model, sys, usr, key, maxtok=1100, temp=0.3):
     body = json.dumps({"model": model, "messages": [{"role": "system", "content": sys}, {"role": "user", "content": usr}], "max_tokens": maxtok, "temperature": temp}).encode()
-    req = urllib.request.Request(URL, data=body, headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"})
-    m = json.loads(urllib.request.urlopen(req, timeout=120).read())["choices"][0]["message"]
-    return m.get("content") or m.get("reasoning") or ""
+    for att in range(5):
+        try:
+            req = urllib.request.Request(URL, data=body, headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"})
+            m = json.loads(urllib.request.urlopen(req, timeout=120).read())["choices"][0]["message"]
+            return m.get("content") or m.get("reasoning") or ""
+        except Exception:
+            time.sleep(2*(att+1))
+    return ""
 
 def jp(t):
     if not t: return None
@@ -31,7 +37,7 @@ ROLE = {"front": "stop/go, lights & signs, pedestrians ahead", "front-left/side"
 CSYS = "You are the reasoning module of an autonomous-driving cockpit. You ONLY assert facts in the GROUND-TRUTH. Never invent objects/signs/lights/weather. Output only JSON."
 QSYS = CSYS
 XSYS = "You are a strict driving-caption fact-checker. Output only JSON."
-CSCHEMA = 'Output STRICT JSON {"scene","risk","decision","prediction"}: scene=road + each GT object with ego-relative position and distance (GT only); risk=risk implied ONLY by listed objects, name object and position; decision=ego action (proceed/slow/stop/yield/lane-change) for this camera role; prediction=1-3s intent of most safety-critical dynamic object or "none".'
+CSCHEMA = 'Use CHAIN-OF-CAUSATION reasoning (NVIDIA Alpamayo style): each step must causally follow from the previous. Output STRICT JSON {"scene","risk","decision","prediction"}: scene=road type + each GT object with ego-relative position & distance + ego state if given (GT only); risk=the CAUSAL hazard — "because <object> is at <position/distance> and ego is <state>, it may <hazard>"; decision=therefore the ego action (proceed/slow/stop/yield/lane-change) for this camera role, explicitly justified by the risk cause; prediction=1-3s future intent of the most safety-critical dynamic object, or "none". Be causal and concrete, GT-grounded only.'
 QSCHEMA = 'Generate 4 DIVERSE driving QA grounded ONLY in GT, covering at least 4 of: counting, spatial, risk, action, intent, reject (ask about something NOT in GT -> answer "not visible"). Output STRICT JSON: {"qa":[{"q":"","a":"","capability":"","type":""}]}'
 XSCHEMA = 'Delete or correct EVERY claim not in GT. Output STRICT JSON: {"faithful":true,"corrected":{"scene":"","risk":"","decision":"","prediction":""}}'
 
@@ -63,13 +69,24 @@ def work(idx_r):
 
 rows = [json.loads(l) for l in open(a.inp)]
 if a.num: rows = rows[:a.num]
+seen=set()
+if os.path.exists(a.raw):
+    for l in open(a.raw):
+        try: seen.add(json.loads(l)["image"])
+        except: pass
+rows=[r for r in rows if r["image"] not in seen]
+print("RESUME skip",len(seen),"todo",len(rows),flush=True)
 print("ROWS", len(rows), flush=True)
-sg = []; raw = []; done = 0
-with cf.ThreadPoolExecutor(max_workers=10) as ex:
+done = 0; okc = 0
+fr=open(a.raw,"a" if seen else "w")
+with cf.ThreadPoolExecutor(max_workers=5) as ex:
     for res in ex.map(work, list(enumerate(rows))):
         done += 1
-        if res: sg.append(res["sg"]); raw.append(res["raw"])
-        if done % 50 == 0: print("done", done, "ok", len(sg), flush=True)
-json.dump(sg, open(a.out, "w"), ensure_ascii=False)
-open(a.raw, "w").write(NL.join(json.dumps(x, ensure_ascii=False) for x in raw))
-print("VULTR_DONE total", len(rows), "ok", len(sg), flush=True)
+        if res:
+            okc += 1; fr.write(json.dumps(res["raw"],ensure_ascii=False)+NL); fr.flush()
+        if done % 50 == 0: print("done", done, "ok", okc, flush=True)
+fr.close()
+allraw=[json.loads(l) for l in open(a.raw)]
+sgall=[{"conversations":[{"from":"human","value":"<image>\nDescribe this exterior driving scene and give a driving decision."},{"from":"gpt","value":" ".join(k.capitalize()+": "+str(x["caption"].get(k,"")) for k in ["scene","risk","decision","prediction"] if x["caption"].get(k))}]+sum(([{"from":"human","value":str(q["q"])},{"from":"gpt","value":str(q["a"])}] for q in x["qa"] if q.get("q") and q.get("a")),[]),"images":[x["image"]]} for x in allraw]
+json.dump(sgall, open(a.out, "w"), ensure_ascii=False)
+print("VULTR_DONE total", len(rows), "ok", okc, flush=True)
