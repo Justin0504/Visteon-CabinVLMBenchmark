@@ -1,6 +1,7 @@
 """Frontier-LLM reasoning layer (production): regenerate CoT caption + diversified QA from GT facts,
 cross-checked. Runs locally vs Vultr (DeepSeek-V4 gen + DeepSeek-V3.2 cross-check), 5-key concurrency."""
-import json, urllib.request, argparse, concurrent.futures as cf, os
+import json, urllib.request, argparse, concurrent.futures as cf, os, threading
+_WLOCK=threading.Lock()
 KEYS = [l.split("=")[1].strip() for l in open("/Users/justin/SJTU-450/.secrets/vultr_keys.env") if l.startswith("VULTR_KEY")]
 URL = "https://api.vultrinference.com/v1/chat/completions"
 GEN = "deepseek-ai/DeepSeek-V4-Flash"; XC = "deepseek-ai/DeepSeek-V3.2-NVFP4"
@@ -83,10 +84,17 @@ with cf.ThreadPoolExecutor(max_workers=5) as ex:
     for res in ex.map(work, list(enumerate(rows))):
         done += 1
         if res:
-            okc += 1; fr.write(json.dumps(res["raw"],ensure_ascii=False)+NL); fr.flush()
+            okc += 1
+            with _WLOCK:
+                fr.write(json.dumps(res["raw"],ensure_ascii=False)+NL); fr.flush()
         if done % 50 == 0: print("done", done, "ok", okc, flush=True)
 fr.close()
-allraw=[json.loads(l) for l in open(a.raw)]
+allraw=[]
+for l in open(a.raw):
+    l=l.strip()
+    if not l: continue
+    try: allraw.append(json.loads(l))
+    except: pass
 sgall=[{"conversations":[{"from":"human","value":"<image>\nDescribe this exterior driving scene and give a driving decision."},{"from":"gpt","value":" ".join(k.capitalize()+": "+str(x["caption"].get(k,"")) for k in ["scene","risk","decision","prediction"] if x["caption"].get(k))}]+sum(([{"from":"human","value":str(q["q"])},{"from":"gpt","value":str(q["a"])}] for q in x["qa"] if q.get("q") and q.get("a")),[]),"images":[x["image"]]} for x in allraw]
 json.dump(sgall, open(a.out, "w"), ensure_ascii=False)
 print("VULTR_DONE total", len(rows), "ok", okc, flush=True)
