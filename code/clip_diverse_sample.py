@@ -45,11 +45,11 @@ sims=E[idx]@E[idx].T; np.fill_diagonal(sims,0)
 red=float((sims>0.95).sum()/(len(idx)*(len(idx)-1)))
 print(f"REDUNDANCY cos>0.95 pair-rate ~ {red*100:.2f}%")
 # 最远点采样(FPS):最大化多样性
-k=min(a.n,N); sel=[random.randrange(N)]
-mind=E@E[sel[0]]
+k=min(a.n,N); s0=random.randrange(N); sel=[s0]
+mind=1-(E@E[s0])          # cosine distance from each point to the selected set
 for _ in range(k-1):
-    j=int(np.argmin(mind)); sel.append(j)
-    mind=np.maximum(mind*0,np.minimum(mind, 1-(E@E[j])))  # update min cos-dist
+    j=int(np.argmax(mind)); sel.append(j)   # pick the FURTHEST point
+    mind=np.minimum(mind, 1-(E@E[j]))        # update nearest-selected distance
 sel=list(dict.fromkeys(sel))
 json.dump([paths[i] for i in sel],open(a.out,"w"))
 print(f"DIVERSE_SUBSET selected {len(sel)} / {N} (FPS, max coverage)")
