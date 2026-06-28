@@ -81,3 +81,30 @@ lesson is already reflected in v15's exterior data choice.
 - **Non-commercial (research-only, flag for Visteon)**: nuScenes / nuImages (CC BY-NC) underlie
   much of the exterior/VRU/POI/TL imagery → captions are deliverable as research, but the
   underlying images carry nuScenes' non-commercial license. Keep this boundary on redistribution.
+
+---
+
+## 7. Validation update (new-case evals on held-out data)
+
+Three use cases that were previously unmeasured, now evaluated on data produced AFTER v15 training
+(genuine held-out):
+
+| use case | held-out set | metric | score |
+|---|---|---|---|
+| #4 traffic light | India dashcam (unseen) | light-color accuracy | **84.6%** |
+| #6 VRU | nuScenes non-train slice | pedestrian count (±1) | **82.5%** |
+| #6 VRU | " | cyclist recall (separation) | **87.5%** |
+| #8 POI | nuImages (unseen) | POI detection rate | **75%** |
+| #8 POI | " | exact business-name hit | **40%** |
+
+#4 light and #6 VRU reach delivery-credible accuracy; #8 detects POIs well but exact storefront naming
+is hard (distant signage).
+
+## 8. Caption cleanup + OCR coordinate grounding
+
+- **fusion_v2 format fix**: 24% of captions had the `scene` field as a serialized dict; all 590 converted
+  to natural prose (`fusion_sharegpt_v2_clean.json`), 0 remaining.
+- **#5 OCR→coordinates**: new `ocr_coord_extract.py` reads on-scene text + bounding box (e.g.
+  `"Portsdown Rd" [219,160,313,252]`). Mechanism works, but **readable-text yield in driving scenes is
+  genuinely low (~3%, confirmed across two models)** — driving views are text-sparse. For volume, pair
+  with a dense scene-text set (Total-Text, BSD-3) for the skill + this extractor for domain realism.
