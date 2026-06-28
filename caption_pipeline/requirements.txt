@@ -1,0 +1,8 @@
+# Stage A / Stage B use only the Python standard library (urllib, json, base64, concurrent.futures).
+# No third-party packages are required to RUN the pipeline — only a Vultr API key.
+#
+# Optional, for the helper tools shipped alongside (scene tagging needs nothing extra;
+# CLIP diversity sampling, if you use it, needs torch + transformers + pillow):
+# torch
+# transformers
+# pillow
