@@ -40,7 +40,15 @@ def _xc_user(r, cap):
             "Caption: " + json.dumps(cap, ensure_ascii=False) + NL + prompts.xcheck_schema())
 
 def _flatten(cap):
-    return " ".join(k.capitalize() + ": " + str(cap.get(k, "")) for k in KEYS_OF if cap.get(k))
+    # NATURAL PROSE (authoritative): no 'Scene:/Risk:' labels — labeled format scored lower on the
+    # judge (6.45 vs 7.65). Join the four fields into flowing sentences.
+    parts = []
+    for k in KEYS_OF:
+        v = str(cap.get(k, "")).strip()
+        if not v or v.lower() == "none":
+            continue
+        parts.append(v if v.endswith((".", "!", "?")) else v + ".")
+    return " ".join(parts).strip()
 
 def work(ir, keys):
     i, r = ir

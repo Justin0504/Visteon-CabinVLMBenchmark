@@ -54,10 +54,11 @@ prediction = 1-3s intent of the most safety-critical object, or "none".
 ```
 **Why:** `scene → risk → decision → prediction` mirrors the perception→planning chain in production VLA stacks.
 
-> ⚠️ **Tested lesson:** training on the *labeled* form (`Scene: … Risk: …`) scored **lower** on the judge
-> (6.45 vs 7.65) than a natural flowing paragraph. For the training set we therefore strip the labels into
-> natural prose. An A/B test of a fully-rewritten "natural" caption prompt did **not** beat the current one
-> (9.17 vs 9.29), so the prompt above was kept. **Keep the causal *content*, present it as natural prose.**
+> ⚠️ **Tested lesson (authoritative):** the *labeled* form (`Scene: … Risk: …`) scored **lower** on the
+> judge (6.45 vs 7.65) than natural prose. So **`stage_b_fusion._flatten()` emits label-free prose** — the
+> model still *thinks* in the scene→risk→decision→prediction JSON schema, but the final ingested caption
+> reads as flowing sentences. An A/B of a fully-rewritten "natural" *prompt* did **not** beat the current
+> one (9.17 vs 9.29), so the prompt is kept. **Rule: causal content in the JSON schema, ingested as prose.**
 
 ---
 
