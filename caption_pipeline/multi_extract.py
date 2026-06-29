@@ -9,7 +9,7 @@ Run:
 import json, base64, os, argparse, threading
 import concurrent.futures as cf
 from . import config
-from .vultr_client import chat_vision, parse_json
+from .vultr_client import chat_vision, parse_json, encode_image
 
 _W = threading.Lock()
 SYS = "You are a driving-scene perception module. Report ONLY what is clearly visible; never invent."
@@ -26,7 +26,7 @@ PROMPT = (
 )
 
 def extract(img_path, key):
-    b64 = base64.b64encode(open(img_path, "rb").read()).decode()
+    b64 = encode_image(img_path)
     txt = chat_vision(config.VISION_MODEL, SYS, PROMPT, b64, key, config.VISION_MAX_TOKENS, 240)
     if not txt:
         txt = chat_vision(config.VISION_MODEL_FB, SYS, PROMPT, b64, key, 1500, 150)
@@ -73,7 +73,10 @@ def build_sharegpts(rows, outdir):
                 {"from": "human", "value": "<image>\nBreak down the vulnerable road users by type."},
                 {"from": "gpt", "value": "; ".join(parts) + "."}], "images": [img]})
     for name, arr in [("scene", scene), ("light", tl), ("poi", poi), ("ocr", ocr), ("sign", sign), ("vru", vru)]:
-        json.dump(arr, open(os.path.join(outdir, f"harvest_{name}_sharegpt.json"), "w"), ensure_ascii=False)
+        dst = os.path.join(outdir, f"harvest_{name}_sharegpt.json")
+        with open(dst + ".tmp", "w") as f:               # atomic: tmp then replace (no half-written artifact)
+            json.dump(arr, f, ensure_ascii=False)
+        os.replace(dst + ".tmp", dst)
         print(f"  harvest_{name}: {len(arr)}")
 
 def main():
@@ -109,7 +112,17 @@ def main():
                 with _W: fr.write(json.dumps(res, ensure_ascii=False) + "\n"); fr.flush()
             if done % 50 == 0: print(f"done {done} ok {ok}", flush=True)
     fr.close()
-    allr = [json.loads(l) for l in open(raw_path)]
+    allr = []
+    for l in open(raw_path):          # guard per-line: a torn/empty line must not kill aggregation
+        l = l.strip()
+        if not l:
+            continue
+        try:
+            r = json.loads(l)
+            if r.get("data"):
+                allr.append(r)
+        except Exception:
+            continue
     print(f"MULTI_EXTRACT_DONE frames={len(allr)}", flush=True)
     build_sharegpts(allr, a.out)
 

@@ -1,8 +1,7 @@
-# Stage A / Stage B use only the Python standard library (urllib, json, base64, concurrent.futures).
-# No third-party packages are required to RUN the pipeline — only a Vultr API key.
+# Pipeline runtime:
+pydantic>=2          # typed output schemas + validation (industrial-grade field construction)
+pillow               # image downscale before base64 (caps API payload / avoids 413/504)
+# Vultr calls use stdlib urllib (no extra HTTP dep). Models run on Vultr — no local GPU needed.
 #
-# Optional, for the helper tools shipped alongside (scene tagging needs nothing extra;
-# CLIP diversity sampling, if you use it, needs torch + transformers + pillow):
-# torch
-# transformers
-# pillow
+# For the local helper tools only (eval/training run on the server's own envs):
+# torch, transformers, qwen-vl-utils  (eval_*.py / demo_build.py)

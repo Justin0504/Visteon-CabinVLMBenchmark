@@ -12,7 +12,7 @@ Run:
 import json, base64, os, argparse, threading
 import concurrent.futures as cf
 from . import config
-from .vultr_client import chat_vision, parse_json
+from .vultr_client import chat_vision, parse_json, encode_image
 
 _W = threading.Lock()
 OCR_SYS = "You read on-scene text (signs, billboards, shop names, road text) and report where each appears. You never invent text."
@@ -24,7 +24,7 @@ OCR_PROMPT = (
 )
 
 def extract(img_path, key):
-    b64 = base64.b64encode(open(img_path, "rb").read()).decode()
+    b64 = encode_image(img_path)
     txt = chat_vision(config.VISION_MODEL, OCR_SYS, OCR_PROMPT, b64, key, config.VISION_MAX_TOKENS, 240)
     if not txt:
         txt = chat_vision(config.VISION_MODEL_FB, OCR_SYS, OCR_PROMPT, b64, key, 1500, 150)
@@ -80,8 +80,15 @@ def main():
                 with _W: fr.write(json.dumps(res, ensure_ascii=False) + "\n"); fr.flush()
             if done % 50 == 0: print(f"done {done} with_text {hit}", flush=True)
     fr.close()
-    allr = [json.loads(l) for l in open(a.out)]
-    json.dump([to_sharegpt(r) for r in allr], open(a.sg, "w"), ensure_ascii=False)
+    allr = []
+    for l in open(a.out):
+        l = l.strip()
+        if not l: continue
+        try: allr.append(json.loads(l))
+        except Exception: continue
+    with open(a.sg + ".tmp", "w") as f:
+        json.dump([to_sharegpt(r) for r in allr], f, ensure_ascii=False)
+    os.replace(a.sg + ".tmp", a.sg)
     print(f"OCR_COORD_DONE images={done} with_text={hit} sharegpt={len(allr)}", flush=True)
 
 if __name__ == "__main__":

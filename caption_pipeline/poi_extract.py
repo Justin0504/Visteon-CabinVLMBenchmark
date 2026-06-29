@@ -15,7 +15,7 @@ Run:
 import json, base64, os, argparse, threading
 import concurrent.futures as cf
 from . import config
-from .vultr_client import chat_vision, parse_json
+from .vultr_client import chat_vision, parse_json, encode_image
 
 _W = threading.Lock()
 POI_SYS = "You read point-of-interest (POI) signage from street scenes. You never invent names."
@@ -28,7 +28,7 @@ POI_PROMPT = (
 )
 
 def extract(img_path, key):
-    b64 = base64.b64encode(open(img_path, "rb").read()).decode()
+    b64 = encode_image(img_path)
     txt = chat_vision(config.VISION_MODEL, POI_SYS, POI_PROMPT, b64, key, config.VISION_MAX_TOKENS, 240)
     if not txt:
         txt = chat_vision(config.VISION_MODEL_FB, POI_SYS, POI_PROMPT, b64, key, 1500, 150)

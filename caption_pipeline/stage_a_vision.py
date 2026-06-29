@@ -15,12 +15,12 @@ Tuning for the fast fallback model (avoids 504): VISION_MODEL=...Omni... VISION_
 import json, base64, os, argparse, threading
 import concurrent.futures as cf
 from . import config, prompts
-from .vultr_client import chat_vision
+from .vultr_client import chat_vision, encode_image
 
 _W = threading.Lock()
 
 def describe(img_path, key):
-    b64 = base64.b64encode(open(img_path, "rb").read()).decode()
+    b64 = encode_image(img_path)
     # primary (best quality)
     d = chat_vision(config.VISION_MODEL, prompts.VISION_SYS, prompts.VISION_PROMPT, b64, key, config.VISION_MAX_TOKENS, 240)
     if d:

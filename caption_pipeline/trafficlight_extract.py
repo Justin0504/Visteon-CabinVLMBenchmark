@@ -14,7 +14,7 @@ Run:
 import json, base64, os, argparse, threading
 import concurrent.futures as cf
 from . import config
-from .vultr_client import chat_vision, parse_json
+from .vultr_client import chat_vision, parse_json, encode_image
 
 _W = threading.Lock()
 TL_SYS = "You read traffic-light signal state from driving images. You report only what is clearly visible."
@@ -27,7 +27,7 @@ TL_PROMPT = (
 )
 
 def extract(img_path, key):
-    b64 = base64.b64encode(open(img_path, "rb").read()).decode()
+    b64 = encode_image(img_path)
     txt = chat_vision(config.VISION_MODEL, TL_SYS, TL_PROMPT, b64, key, config.VISION_MAX_TOKENS, 240)
     if not txt:
         txt = chat_vision(config.VISION_MODEL_FB, TL_SYS, TL_PROMPT, b64, key, 1500, 150)

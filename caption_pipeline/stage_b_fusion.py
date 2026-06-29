@@ -108,10 +108,14 @@ def main():
 
     allr = []
     for l in open(a.raw):
+        l = l.strip()
+        if not l: continue
         try: allr.append(json.loads(l))
         except Exception: pass
     sg = [to_sharegpt(x) for x in allr]
-    json.dump(sg, open(a.out, "w"), ensure_ascii=False)
+    with open(a.out + ".tmp", "w") as f:           # atomic final write
+        json.dump(sg, f, ensure_ascii=False)
+    os.replace(a.out + ".tmp", a.out)
     print(f"STAGE_B_DONE ok {ok} total_sharegpt {len(sg)}", flush=True)
 
 if __name__ == "__main__":
