@@ -11,12 +11,13 @@ Output jsonl rows: {image, lights:[{state,shape,position,for_lane}]}  (only rows
 Run:
   VULTR_KEYS=keys.env python -m caption_pipeline.trafficlight_extract --inp raw.jsonl --out tl_raw.jsonl
 """
-import json, base64, os, argparse, threading
+import json, base64, os, argparse, threading, logging
 import concurrent.futures as cf
 from . import config
 from .vultr_client import chat_vision, parse_json, encode_image
 
 _W = threading.Lock()
+_log = logging.getLogger("tl")
 TL_SYS = "You read traffic-light signal state from driving images. You report only what is clearly visible."
 TL_PROMPT = (
     "Look for TRAFFIC LIGHTS (signal heads) in this driving scene. For each clearly visible one report its "
@@ -66,11 +67,11 @@ def main():
                 return None
             lights = extract(r["image"], keys[i % len(keys)])
             return {"image": r["image"], "camera": r.get("camera", ""), "lights": lights} if lights else None
-        except Exception:
-            return None
+        except Exception as e:
+            _log.warning('row failed %s: %s', r.get('image'), e); return None
 
-    fr = open(a.out, "a" if seen else "w"); done = hit = 0
-    with cf.ThreadPoolExecutor(max_workers=config.WORKERS) as ex:
+    done = hit = 0
+    with open(a.out, "a" if seen else "w") as fr, cf.ThreadPoolExecutor(max_workers=config.WORKERS) as ex:
         for res in ex.map(work, list(enumerate(rows))):
             done += 1
             if res:
@@ -79,7 +80,6 @@ def main():
                     fr.write(json.dumps(res, ensure_ascii=False) + "\n"); fr.flush()
             if done % 50 == 0:
                 print(f"done {done} with_light {hit}", flush=True)
-    fr.close()
     print(f"TL_EXTRACT_DONE images={done} with_light={hit}", flush=True)
 
 if __name__ == "__main__":

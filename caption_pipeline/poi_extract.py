@@ -12,12 +12,13 @@ Output jsonl rows: {image, pois:[{name,category,position}]}  (only rows with >=1
 Run:
   VULTR_KEYS=keys.env python -m caption_pipeline.poi_extract --inp raw.jsonl --out poi_raw.jsonl
 """
-import json, base64, os, argparse, threading
+import json, base64, os, argparse, threading, logging
 import concurrent.futures as cf
 from . import config
 from .vultr_client import chat_vision, parse_json, encode_image
 
 _W = threading.Lock()
+_log = logging.getLogger("poi")
 POI_SYS = "You read point-of-interest (POI) signage from street scenes. You never invent names."
 POI_PROMPT = (
     "Look ONLY at roadside buildings and storefronts. Is there any business/POI whose sign text is "
@@ -66,11 +67,11 @@ def main():
                 return None
             pois = extract(r["image"], keys[i % len(keys)])
             return {"image": r["image"], "pois": pois} if pois else None
-        except Exception:
-            return None
+        except Exception as e:
+            _log.warning('row failed %s: %s', r.get('image'), e); return None
 
-    fr = open(a.out, "a" if seen else "w"); done = poi = 0
-    with cf.ThreadPoolExecutor(max_workers=config.WORKERS) as ex:
+    done = poi = 0
+    with open(a.out, "a" if seen else "w") as fr, cf.ThreadPoolExecutor(max_workers=config.WORKERS) as ex:
         for res in ex.map(work, list(enumerate(rows))):
             done += 1
             if res:
@@ -79,7 +80,6 @@ def main():
                     fr.write(json.dumps(res, ensure_ascii=False) + "\n"); fr.flush()
             if done % 50 == 0:
                 print(f"done {done} with_poi {poi}", flush=True)
-    fr.close()
     print(f"POI_EXTRACT_DONE images={done} with_poi={poi}", flush=True)
 
 if __name__ == "__main__":

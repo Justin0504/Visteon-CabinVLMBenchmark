@@ -9,12 +9,13 @@ Output sharegpt: text->location QA.
 Run:
   VULTR_KEYS=keys.env python -m caption_pipeline.ocr_coord_extract --inp raw.jsonl --out ocr_raw.jsonl --sg ocr_sharegpt.json
 """
-import json, base64, os, argparse, threading
+import json, base64, os, argparse, threading, logging
 import concurrent.futures as cf
 from . import config
 from .vultr_client import chat_vision, parse_json, encode_image
 
 _W = threading.Lock()
+_log = logging.getLogger("ocr")
 OCR_SYS = "You read on-scene text (signs, billboards, shop names, road text) and report where each appears. You never invent text."
 OCR_PROMPT = (
     "List every clearly READABLE text string in this driving scene and its bounding box. Use image coordinates "
@@ -70,16 +71,16 @@ def main():
             if not os.path.exists(r["image"]): return None
             ts = extract(r["image"], keys[i % len(keys)])
             return {"image": r["image"], "texts": ts} if ts else None
-        except Exception: return None
-    fr = open(a.out, "a" if seen else "w"); done = hit = 0
-    with cf.ThreadPoolExecutor(max_workers=config.WORKERS) as ex:
+        except Exception as e:
+            _log.warning("row failed %s: %s", r.get("image"), e); return None
+    done = hit = 0
+    with open(a.out, "a" if seen else "w") as fr, cf.ThreadPoolExecutor(max_workers=config.WORKERS) as ex:
         for res in ex.map(work, list(enumerate(rows))):
             done += 1
             if res:
                 hit += 1
                 with _W: fr.write(json.dumps(res, ensure_ascii=False) + "\n"); fr.flush()
             if done % 50 == 0: print(f"done {done} with_text {hit}", flush=True)
-    fr.close()
     allr = []
     for l in open(a.out):
         l = l.strip()

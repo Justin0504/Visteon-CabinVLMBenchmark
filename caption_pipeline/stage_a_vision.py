@@ -12,12 +12,13 @@ Run:
   VULTR_KEYS=keys.env python -m caption_pipeline.stage_a_vision --inp raw.jsonl --out vision.jsonl
 Tuning for the fast fallback model (avoids 504): VISION_MODEL=...Omni... VISION_MAX_TOKENS=1500 WORKERS=2
 """
-import json, base64, os, argparse, threading
+import json, base64, os, argparse, threading, logging
 import concurrent.futures as cf
 from . import config, prompts
 from .vultr_client import chat_vision, encode_image
 
 _W = threading.Lock()
+_log = logging.getLogger("stage_a")
 
 def describe(img_path, key):
     b64 = encode_image(img_path)
@@ -58,11 +59,12 @@ def main():
                 return None
             return {"image": r["image"], "camera": r.get("camera", ""), "gt": r.get("gt", ""),
                     "vehicles": r.get("vehicles", "none"), "vrus": r.get("vrus", "none"), "vision_desc": d}
-        except Exception:
+        except Exception as e:
+            _log.warning("row failed %s: %s", r.get("image"), e)  # no silent swallow
             return None
 
-    fr = open(a.out, "a" if seen else "w"); done = ok = 0
-    with cf.ThreadPoolExecutor(max_workers=config.WORKERS) as ex:
+    done = ok = 0
+    with open(a.out, "a" if seen else "w") as fr, cf.ThreadPoolExecutor(max_workers=config.WORKERS) as ex:  # with: no lost buffer on crash
         for res in ex.map(work, list(enumerate(rows))):
             done += 1
             if res:
@@ -71,7 +73,6 @@ def main():
                     fr.write(json.dumps(res, ensure_ascii=False) + "\n"); fr.flush()
             if done % 50 == 0:
                 print(f"done {done} ok {ok}", flush=True)
-    fr.close()
     print(f"STAGE_A_DONE ok {ok}", flush=True)
 
 if __name__ == "__main__":
